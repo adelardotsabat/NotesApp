@@ -27,9 +27,12 @@ fun NotesScreen(
     vm: NotesViewModel = viewModel()
 ) {
     val notes by vm.notes.collectAsState()
-    var input by rememberSaveable { mutableStateOf("") }
+    var titleInput by rememberSaveable { mutableStateOf("") }
+    var noteInput by rememberSaveable { mutableStateOf("") }
+
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var editingText by rememberSaveable { mutableStateOf("") }
+    var editingTitle by rememberSaveable { mutableStateOf("") }
+    var editingNote by rememberSaveable { mutableStateOf("") }
 
     Column(
         modifier = modifier
@@ -39,23 +42,32 @@ fun NotesScreen(
         Text(text = "Catatan Saya", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(12.dp))
 
-        // Form input (CREATE)
-        Row(
+        // Form input (CREATE: Title & Note)
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             OutlinedTextField(
-                value = input,
-                onValueChange = { input = it },
-                label = { Text("Catatan baru") },
+                value = titleInput,
+                onValueChange = { titleInput = it },
+                label = { Text("Judul catatan") },
                 singleLine = true,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth()
             )
-            Button(onClick = {
-                vm.addNote(input)
-                input = ""
-            }) {
+            OutlinedTextField(
+                value = noteInput,
+                onValueChange = { noteInput = it },
+                label = { Text("Isi catatan") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Button(
+                onClick = {
+                    vm.addNote(titleInput, noteInput)
+                    titleInput = ""
+                    noteInput = ""
+                },
+                modifier = Modifier.align(Alignment.End)
+            ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_add),
                     contentDescription = null,
@@ -83,10 +95,12 @@ fun NotesScreen(
                 items(notes, key = { it.id }) { note ->
                     if (editingId == note.id) {
                         NoteItemEditing(
-                            text = editingText,
-                            onTextChange = { editingText = it },
+                            title = editingTitle,
+                            noteText = editingNote,
+                            onTitleChange = { editingTitle = it },
+                            onNoteChange = { editingNote = it },
                             onSave = {
-                                vm.updateNote(note, editingText)
+                                vm.updateNote(note, editingTitle, editingNote)
                                 editingId = null
                             },
                             onCancel = {
@@ -98,7 +112,8 @@ fun NotesScreen(
                             note = note,
                             onEdit = {
                                 editingId = note.id
-                                editingText = note.title
+                                editingTitle = note.title
+                                editingNote = note.note
                             },
                             onDelete = { vm.deleteNote(note) }
                         )
@@ -109,6 +124,7 @@ fun NotesScreen(
         }
     }
 }
+
 @Composable
 fun NoteItem(
     note: Note,
@@ -116,8 +132,9 @@ fun NoteItem(
     onDelete: () -> Unit = {}
 ) {
     ListItem(
-        headlineContent = { Text(note.title) },
-        supportingContent = { Text("ID: ${note.id}") },
+        overlineContent = { Text("ID: ${note.id}") },
+        headlineContent = { Text(note.title, fontWeight = FontWeight.SemiBold) },
+        supportingContent = { Text(note.note) },
         trailingContent = {
             Row {
                 IconButton(onClick = onEdit) {
@@ -141,8 +158,10 @@ fun NoteItem(
 
 @Composable
 fun NoteItemEditing(
-    text: String,
-    onTextChange: (String) -> Unit,
+    title: String,
+    noteText: String,
+    onTitleChange: (String) -> Unit,
+    onNoteChange: (String) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
@@ -150,15 +169,27 @@ fun NoteItemEditing(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        OutlinedTextField(
-            value = text,
-            onValueChange = onTextChange,
-            label = { Text("Ubah catatan") },
-            singleLine = true,
-            modifier = Modifier.weight(1f)
-        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            OutlinedTextField(
+                value = title,
+                onValueChange = onTitleChange,
+                label = { Text("Ubah judul") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = noteText,
+                onValueChange = onNoteChange,
+                label = { Text("Ubah isi catatan") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         IconButton(onClick = onSave) {
             Icon(
                 painterResource(R.drawable.ic_check),
@@ -179,6 +210,6 @@ fun NoteItemEditing(
 @Composable
 fun NoteItemPreview() {
     NotesAppTheme {
-        NoteItem(note = Note(id = 1, title = "Belajar Room Database"))
+        NoteItem(note = Note(id = 1, title = "Belajar Room", note = "Implementasi CRUD dengan Jetpack Compose"))
     }
 }
